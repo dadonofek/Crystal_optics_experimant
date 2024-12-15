@@ -1,0 +1,22 @@
+Optical Power Monitor
+6.1.4945.818
+Delimiter Used: , ','
+
+Start of Measurement , 11/25/2024 17:24:35
+Sample Interval , 1 s
+, PM 220203310
+Type, PM16-120
+Serialnumber, 220203310
+Sensor, Photodiode
+SensorSerialnumber, 220203310
+Wavelength / Responsivity, 633 nm
+
+,,,PM 220203310, 
+Samples ,Date (MM/dd/yyyy) ,Time of day (hh:mm:ss) ,Power (W),
+0, 11/25/2024, 17:24:35.169,0.0012699
+1, 11/25/2024, 17:24:36.407,0.0012698
+2, 11/25/2024, 17:24:37.424,0.0012697
+3, 11/25/2024, 17:24:38.448,0.0012696
+4, 11/25/2024, 17:24:39.452,0.0012696
+5, 11/25/2024, 17:24:40.473,0.0012695
+6, 11/25/2024, 17:24:41.493,0.0012695
