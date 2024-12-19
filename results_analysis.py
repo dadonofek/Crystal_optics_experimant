@@ -113,27 +113,62 @@ def ecc_error(I_min, I_max, err_fartor):
     return np.sqrt((d_min*I_min*err_fartor)**2 + (d_max*I_max*err_fartor)**2)
 
 
-def theo_I(E_0, chi, phy, delta):
-    chi_rad = np.radians(chi).reshape(-1, 1)  # Reshape chi to (500, 1)
-    phy_rad = np.radians(phy)  # No need to reshape phy
-    delta_rad = np.radians(delta)
+def jones_qwp_output(input_state, theta=0):
+    theta_rad = np.deg2rad(theta)
+    qwp_matrix = np.array([
+        [np.cos(theta_rad)**2 + 1j * np.sin(theta_rad)**2, (1 - 1j) * np.sin(theta_rad) * np.cos(theta_rad)],
+        [(1 - 1j) * np.sin(theta_rad) * np.cos(theta_rad), np.sin(theta_rad)**2 + 1j * np.cos(theta_rad)**2]
+    ])
+    output_state = np.dot(qwp_matrix, input_state)
 
-    return E_0 * (
-            np.cos(chi_rad) ** 2 -
-            np.sin(2 * phy_rad) * np.sin(2 * (phy_rad - chi_rad)) * np.sin(delta_rad / 2) ** 2
-    )
+    return output_state
+
+def jones_intensity(jones_vector):
+    return np.abs(jones_vector[0, 0])**2 + np.abs(jones_vector[1, 0])**2
+
+def jones_polarizer(input_state, theta=0):
+    theta_rad = np.deg2rad(theta)
+    polarizer_matrix = np.array([
+        [np.cos(theta_rad)**2, np.cos(theta_rad) * np.sin(theta_rad)],
+        [np.cos(theta_rad) * np.sin(theta_rad), np.sin(theta_rad)**2]
+    ])
+    output_state = np.dot(polarizer_matrix, input_state)
+
+    return output_state
+
+def theo_eccentricity(theta):
+    assert theta >= 0 and theta <= 90
+    if theta > 45:
+        theta = 90 - theta
+    input_state = np.array([[1], [0]])
+    output_state_qwp = jones_qwp_output(input_state, theta)
+    I_max = jones_intensity(jones_polarizer(output_state_qwp, theta))
+    I_min = jones_intensity(jones_polarizer(output_state_qwp, theta+90))
+
+    return np.sqrt(1 - (I_min/I_max))
 
 
-def theo_eccentricity(deg):
-    I_0 = 1
-    chi = np.linspace(0, 360, 500)
-    delta = 90  # QWP
 
-    I_values = theo_I(I_0, chi, deg, delta)  # (500, 21) array
-    I_min = np.min(I_values, axis=0)  # Min for each deg (shape: 21)
-    I_max = np.max(I_values, axis=0)  # Max for each deg (shape: 21)
+# def theo_I(E_0, chi, phy, delta):
+#     chi_rad = np.radians(chi).reshape(-1, 1)  # Reshape chi to (500, 1)
+#     phy_rad = np.radians(phy)  # No need to reshape phy
+#     delta_rad = np.radians(delta)
+#
+#     return E_0 * (
+#             np.cos(chi_rad) ** 2 -
+#             np.sin(2 * phy_rad) * np.sin(2 * (phy_rad - chi_rad)) * np.sin(delta_rad / 2) ** 2
+#     )
+#
+#
+# def theo_eccentricity_brut_force(deg):
+#     I_0 = 1
+#     chi = np.linspace(0, 360, 500)
+#     delta = 90 # QWP
+#     I_min = min(theo_I(I_0, chi, deg, delta))
+#     I_max = max(theo_I(I_0, chi, deg, delta))
+#     # print(f"{I_min=}, {I_max=}")
+#     return np.sqrt(1 - (I_min/I_max))
 
-    return np.sqrt(1 - (I_min / I_max))
 
 
 def calc_eccentricity(results, err_factor):  # TODO: calc errors
@@ -222,14 +257,12 @@ def plot_cartesian(degrees,
         degrees_theory = np.linspace(min(degrees), max(degrees), 500)  # Fine grid for smooth curve
         angles_rad_theory = np.radians(degrees_theory)
         I_0 = max(means)  # Normalize initial intensity
-        theoretical_intensity = I_0 * np.cos(2*angles_rad_theory - np.pi/2)**2
+        theoretical_intensity = I_0 * np.sin(2*angles_rad_theory)**2
         ax.plot(degrees_theory, theoretical_intensity, color='red', linestyle='-', label="Theoretical Curve")
 
     if type == 'QWP':
-        # degrees_theory = np.linspace(min(degrees), max(degrees), 500)  # Fine grid for smooth curve
-        degrees_theory = degrees
-        angles_rad_theory = np.radians(degrees_theory)
-        theoretical_ecc = np.array([theo_eccentricity(d) for d in angles_rad_theory])
+        degrees_theory = np.linspace(0, 90, 91)  # Fine grid for smooth curve
+        theoretical_ecc = np.array([theo_eccentricity(d) for d in degrees_theory])
         ax.plot(degrees_theory, theoretical_ecc, color='red', linestyle='-', label="Theoretical Curve")
 
     if add_trendline:
@@ -273,10 +306,10 @@ def calc_T_R(results):
 
 if __name__ == "__main__":
     input_err_factor = 0.036 # from cal_from_0 file, see analyze_cal.py
-    # #A- extinction ratio
-    # results = process_all_csv_in_directory("/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/A_polaryzers",
-    #                                        extract_deg=False)
-    # calculate_extinction_ratios(results)
+    #A- extinction ratio
+    results = process_all_csv_in_directory("/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/A_polaryzers",
+                                           extract_deg=False)
+    calculate_extinction_ratios(results)
     #
     #
     #
@@ -288,18 +321,18 @@ if __name__ == "__main__":
     #                x_label="HWP orientation [deg]",
     #                y_label="Intensity [mV]",
     #                type='HWP')
-    #
-    # # C- QWP
-    # results = process_all_csv_in_directory(directory_path="/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/C_meas",
-    #                                        name_type=str)
-    # deg, ecc, ecc_err = calc_eccentricity(results, input_err_factor)
-    #
-    # plot_cartesian(deg, [1] * len(deg), ecc, ecc_err,
-    #                title="eccentricity vs QWP orientation",
-    #                x_label="QWP orientation [deg]",
-    #                y_label="eccentricity",
-    #                type='QWP',
-    #                legend_loc='lower right')
+
+    # C- QWP
+    results = process_all_csv_in_directory(directory_path="/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/C_meas",
+                                           name_type=str)
+    deg, ecc, ecc_err = calc_eccentricity(results, input_err_factor)
+
+    plot_cartesian(deg, [2] * len(deg), ecc, ecc_err,
+                   title="eccentricity vs QWP orientation",
+                   x_label="QWP orientation [deg]",
+                   y_label="eccentricity",
+                   type='QWP',
+                   legend_loc='lower right')
 
 
     # # D- opto isolator
@@ -308,14 +341,14 @@ if __name__ == "__main__":
     # calc_T_R(results)
 
 
-    R_results = process_all_csv_in_directory(
-        directory_path="/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/D_meas_R",
-        expression=r'iso_r')
-    T_results = process_all_csv_in_directory(
-        directory_path="/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/D_meas_T",
-        expression=r'iso_t')
-    R_deg, R_I_mean, R_I_std_errs = proccess_data_D(R_results)
-    T_deg, T_I_mean, T_I_std_errs = proccess_data_D(T_results)
+    # R_results = process_all_csv_in_directory(
+    #     directory_path="/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/D_meas_R",
+    #     expression=r'iso_r')
+    # T_results = process_all_csv_in_directory(
+    #     directory_path="/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/D_meas_T",
+    #     expression=r'iso_t')
+    # R_deg, R_I_mean, R_I_std_errs = proccess_data_D(R_results)
+    # T_deg, T_I_mean, T_I_std_errs = proccess_data_D(T_results)
     # plot_cartesian(R_deg, [2] * len(R_deg), R_I_mean*1000, R_I_mean*input_err_factor*1000,
     #                title="R_Opto-isolator",
     #                x_label="QWP orientation [deg]",
@@ -327,23 +360,23 @@ if __name__ == "__main__":
     #                y_label="Intensity [mW]",
     #                add_trendline=True)
 
-    # Calculate the sum of R_I_mean and T_I_mean
-    RT_I_mean_sum = R_I_mean + T_I_mean
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.errorbar(R_deg, R_I_mean * 1000,xerr=[1] * len(R_deg), yerr=R_I_mean * input_err_factor * 1000, fmt='.', label="Reflection", color='blue')
-    ax.plot(R_deg, R_I_mean * 1000, color='blue', linestyle='-')
-
-    ax.errorbar(T_deg, T_I_mean * 1000,xerr=[1] * len(T_deg), yerr=T_I_mean * input_err_factor * 1000, fmt='.', label="Transmission", color='green')
-    ax.plot(T_deg, T_I_mean * 1000, color='green', linestyle='-')
-
-    ax.plot(R_deg, RT_I_mean_sum * 1000, label="Sum (R + T)", color='red', linestyle='--')
-
-    ax.set_title("Reflection and Transmission of Opto-isolator", fontsize=16, color='blue')
-    ax.set_xlabel("QWP orientation [deg]", fontsize=12)
-    ax.set_ylabel("Intensity [mW]", fontsize=12)
-    ax.grid(True)
-    ax.legend(loc="upper right")
-    plt.show()
+    # # Calculate the sum of R_I_mean and T_I_mean
+    # RT_I_mean_sum = R_I_mean + T_I_mean
+    # fig, ax = plt.subplots(figsize=(8, 8))
+    # ax.errorbar(R_deg, R_I_mean * 1000,xerr=[1] * len(R_deg), yerr=R_I_mean * input_err_factor * 1000, fmt='.', label="Reflection", color='blue')
+    # ax.plot(R_deg, R_I_mean * 1000, color='blue', linestyle='-')
+    #
+    # ax.errorbar(T_deg, T_I_mean * 1000,xerr=[1] * len(T_deg), yerr=T_I_mean * input_err_factor * 1000, fmt='.', label="Transmission", color='green')
+    # ax.plot(T_deg, T_I_mean * 1000, color='green', linestyle='-')
+    #
+    # ax.plot(R_deg, RT_I_mean_sum * 1000, label="Sum (R + T)", color='red', linestyle='--')
+    #
+    # ax.set_title("Reflection and Transmission of Opto-isolator", fontsize=16, color='blue')
+    # ax.set_xlabel("QWP orientation [deg]", fontsize=12)
+    # ax.set_ylabel("Intensity [mW]", fontsize=12)
+    # ax.grid(True)
+    # ax.legend(loc="upper right")
+    # plt.show()
 
 
 

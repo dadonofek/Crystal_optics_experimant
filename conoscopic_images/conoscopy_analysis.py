@@ -54,19 +54,95 @@ def plot_light_intensity_filtered(image_path, show_image=False):
 
 def show_image_comp(theo_data, result_data):
     # Display images side by side
-    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
-    axes[0].imshow(theo_data, cmap="gray")
-    axes[0].plot([0, theo_data.shape[1] - 1], [theo_data.shape[0] - 1, 0], color="blue", linestyle="--")
+    fig, axes = plt.subplots(2, 1, figsize=(12, 6))
+    axes[0].imshow(theo_data, cmap='gray')
+    axes[0].plot([0, theo_data.shape[1] - 1], [theo_data.shape[0] - 1, 0], color="red", linestyle="--")
     axes[0].set_title("Theoretical Image")
     axes[0].axis("off")
 
-    axes[1].imshow(result_data, cmap="gray")
-    axes[1].plot([0, result_data.shape[1] - 1], [result_data.shape[0] - 1, 0], color="blue", linestyle="--")
+    axes[1].imshow(result_data)
+    axes[1].plot([0, theo_data.shape[1] - 1], [theo_data.shape[0] - 1, 0], color="red", linestyle="--")
     axes[1].set_title("Result Image")
     axes[1].axis("off")
 
-    plt.tight_layout()
     plt.show()
+
+
+def plot_all(paths, colors, shift=0, plot_indices=None, filter_win=1):
+    """
+    Plot theoretical and result light intensities in separate plots for multiple colors.
+
+    Args:
+        paths (list of tuples): List of (result_path, theo_path) for each color.
+        colors (list of str): List of color labels.
+        shift (int): Shift to apply to result intensity.
+        plot_indices (list or tuple): [start, end] range to plot specific indices.
+        filter_win (int): Window size for filtering intensities.
+    """
+    # Initialize lists to store data for both plots
+    all_theo_intensities = []
+    all_result_intensities = []
+
+    for (result_path, theo_path), color in zip(paths, colors):
+        # Load images
+        theo_image = Image.open(theo_path).convert("L")
+        result_image = Image.open(result_path).convert("L")
+        theo_data = np.array(theo_image)
+        result_data = np.array(result_image)
+
+        # Extract diagonal intensities
+        theo_intensity = np.diagonal(np.flipud(theo_data))
+        result_intensity = np.diagonal(np.flipud(result_data))
+
+        # Apply shift to result intensity
+        if shift != 0:
+            result_intensity = np.roll(result_intensity, shift)
+
+        # Apply smoothing filter
+        result_intensity = np.convolve(result_intensity, np.ones(filter_win) / filter_win, mode='same')
+
+        # Normalize data
+        result_intensity = result_intensity * (theo_intensity.max() / result_intensity.max())
+        min_v = result_intensity[(result_intensity.shape[0] // 2 - 50):(result_intensity.shape[0] // 2 + 50)].min()
+        max_v = result_intensity.max()
+        result_intensity = (result_intensity - min_v) * (max_v / (max_v - min_v))
+        result_intensity /= 255
+        theo_intensity = theo_intensity.copy() / 255
+
+        # Apply plot_indices
+        if plot_indices:
+            start, end = plot_indices
+            theo_intensity = theo_intensity[start:end]
+            result_intensity = result_intensity[start:end]
+
+        # Store intensities for separate plots
+        all_theo_intensities.append((theo_intensity, color))
+        all_result_intensities.append((result_intensity, color))
+
+    # Plot theoretical intensities
+    plt.figure(figsize=(12, 6))
+    for (intensity, color), plot_color in zip(all_theo_intensities, ['purple', 'green', 'red']):
+        plt.plot(intensity, label=f"Theoretical Intensity ({color})", linestyle="-", color=plot_color)
+    plt.xlabel("Point along diagonal [pixels]")
+    plt.ylabel("Intensity [arbitrary units]")
+    plt.ylim(0, 1.1)
+    plt.title("Theoretical Intensity Comparison")
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+    # Plot result intensities
+    plt.figure(figsize=(12, 6))
+    for (intensity, color), plot_color in zip(all_result_intensities, ['purple', 'green', 'red']):
+        plt.plot(intensity, label=f"Result Intensity ({color})", color=plot_color)
+    plt.xlabel("Point along diagonal [pixels]")
+    plt.ylabel("Intensity [arbitrary units]")
+    plt.ylim(0, 1.1)
+    plt.title("Result Intensity Comparison")
+    plt.legend()
+    plt.grid()
+    plt.show()
+
 def plot_intensity_theo_comp(theo_path,
                              result_path,
                              color,
@@ -91,7 +167,7 @@ def plot_intensity_theo_comp(theo_path,
     result_data = np.array(result_image)
 
     if show_images:
-        show_image_comp(theo_data, result_data)
+        show_image_comp(theo_data, Image.open(result_path))
 
     # Extract diagonal intensities
     theo_intensity = np.diagonal(np.flipud(theo_data))
@@ -168,13 +244,25 @@ if __name__ == "__main__":
     # plot_light_intensity_filtered(purple_path, show_image=True)
     plot_intensity_theo_comp(result_path=red_path,
                              theo_path=red_sim_path,
-                             color="628 nm",
+                             color="532 nm",
                              shift=0,
                              plot_indices=[70, 471],
                              show_images=True,
                              filter_win=15)
 
-    # play with green
+
+    # # plot all on the same graph
+    # paths = [
+    #     (purple_path, purple_sim_path),
+    #     (green_path, green_sim_path),
+    #     (red_path, red_sim_path)
+    # ]
+    # colors = ["405 nm", "532 nm", "628 nm"]
+    # plot_all(paths, colors, shift=0, plot_indices=[70, 471], filter_win=15)
+
+
+
+    # # play with green
     #
     # color = "532 nm"
     # filter_win = 8

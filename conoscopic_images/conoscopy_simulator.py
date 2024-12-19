@@ -41,7 +41,7 @@ def conoscopic_pattern_circle(size=500, wavelength=550e-9, thickness=1e-3, ne=1.
     # Calculate the angle between polarizer and crystal axis
     phi = np.arctan2(Y, X)
 
-    # Calculate intensity using equation 9
+    # Calculate intensity using equation 8
     intensity = np.sin(2 * phi) ** 2 * np.sin(delta / 2) ** 2
 
     # Black out pixels outside the main circle
