@@ -251,7 +251,7 @@ def plot_cartesian(degrees,
 
     # Plot the data points with error bars
     ax.errorbar(degrees, means, xerr=degree_errors, yerr=intensity_errors,
-                fmt='.', color='blue', label="Data Points with Error Bars")
+                fmt='.', color='blue', label="Data Points")
 
     if type == 'HWP':
         degrees_theory = np.linspace(min(degrees), max(degrees), 500)  # Fine grid for smooth curve
@@ -268,9 +268,10 @@ def plot_cartesian(degrees,
     if add_trendline:
         ax.plot(degrees, means, color='red', linestyle='-', label="Trend Line")
     # Add labels and formatting
-    ax.set_xlabel(x_label, fontsize=12)
-    ax.set_ylabel(y_label, fontsize=12)
-    ax.set_title(title, fontsize=16, color='blue')
+    ax.set_xlabel(x_label, fontsize=16)
+    ax.set_ylabel(y_label, fontsize=16)
+    ax.set_title(title, fontsize=20, color='blue')
+    plt.xticks(np.arange(degrees[0], degrees[-1], 15))
     ax.grid(True)
     ax.legend(loc=legend_loc)
     plt.show()
@@ -306,21 +307,22 @@ def calc_T_R(results):
 
 if __name__ == "__main__":
     input_err_factor = 0.036 # from cal_from_0 file, see analyze_cal.py
+
     #A- extinction ratio
     results = process_all_csv_in_directory("/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/A_polaryzers",
                                            extract_deg=False)
     calculate_extinction_ratios(results)
-    #
-    #
-    #
-    # #B- HWP
-    # results = process_all_csv_in_directory("/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/B_meas")
-    # deg, I_mean, I_std_errs = proccess_data_B(results)
-    # plot_cartesian(deg, [1] * len(deg), np.array(I_mean)*1000, np.array(I_mean)*input_err_factor*1000,
-    #                title="Intensity vs HWP orientation",
-    #                x_label="HWP orientation [deg]",
-    #                y_label="Intensity [mV]",
-    #                type='HWP')
+
+
+
+    #B- HWP
+    results = process_all_csv_in_directory("/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/B_meas")
+    deg, I_mean, I_std_errs = proccess_data_B(results)
+    plot_cartesian(deg, [1] * len(deg), np.array(I_mean)*1000, np.array(I_mean)*input_err_factor*1000,
+                   title="Intensity vs HWP orientation",
+                   x_label="HWP orientation [deg]",
+                   y_label="Intensity [mV]",
+                   type='HWP')
 
     # C- QWP
     results = process_all_csv_in_directory(directory_path="/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/C_meas",
@@ -335,48 +337,49 @@ if __name__ == "__main__":
                    legend_loc='lower right')
 
 
-    # # D- opto isolator
-    # results = process_all_csv_in_directory("/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/PBS_new",
-    #                                        extract_deg=False)
-    # calc_T_R(results)
+    # D- opto isolator
+    results = process_all_csv_in_directory("/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/PBS_new",
+                                           extract_deg=False)
+    calc_T_R(results)
 
 
-    # R_results = process_all_csv_in_directory(
-    #     directory_path="/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/D_meas_R",
-    #     expression=r'iso_r')
-    # T_results = process_all_csv_in_directory(
-    #     directory_path="/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/D_meas_T",
-    #     expression=r'iso_t')
-    # R_deg, R_I_mean, R_I_std_errs = proccess_data_D(R_results)
-    # T_deg, T_I_mean, T_I_std_errs = proccess_data_D(T_results)
-    # plot_cartesian(R_deg, [2] * len(R_deg), R_I_mean*1000, R_I_mean*input_err_factor*1000,
-    #                title="R_Opto-isolator",
-    #                x_label="QWP orientation [deg]",
-    #                y_label="Intensity [mW]",
-    #                add_trendline=True)
-    # plot_cartesian(T_deg, [2] * len(T_deg), T_I_mean * 1000, T_I_mean * input_err_factor * 1000,
-    #                title="T_Opto-isolator",
-    #                x_label="QWP orientation [deg]",
-    #                y_label="Intensity [mW]",
-    #                add_trendline=True)
+    R_results = process_all_csv_in_directory(
+        directory_path="/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/D_meas_R",
+        expression=r'iso_r')
+    T_results = process_all_csv_in_directory(
+        directory_path="/Users/dadonofek/PycharmProjects/pythonProject/flask/lab_5/D_meas_T",
+        expression=r'iso_t')
+    R_deg, R_I_mean, R_I_std_errs = proccess_data_D(R_results)
+    T_deg, T_I_mean, T_I_std_errs = proccess_data_D(T_results)
+    plot_cartesian(R_deg, [2] * len(R_deg), R_I_mean*1000, R_I_mean*input_err_factor*1000,
+                   title="R_Opto-isolator",
+                   x_label="QWP orientation [deg]",
+                   y_label="Intensity [mW]",
+                   add_trendline=True)
+    plot_cartesian(T_deg, [2] * len(T_deg), T_I_mean * 1000, T_I_mean * input_err_factor * 1000,
+                   title="T_Opto-isolator",
+                   x_label="QWP orientation [deg]",
+                   y_label="Intensity [mW]",
+                   add_trendline=True)
 
-    # # Calculate the sum of R_I_mean and T_I_mean
-    # RT_I_mean_sum = R_I_mean + T_I_mean
-    # fig, ax = plt.subplots(figsize=(8, 8))
-    # ax.errorbar(R_deg, R_I_mean * 1000,xerr=[1] * len(R_deg), yerr=R_I_mean * input_err_factor * 1000, fmt='.', label="Reflection", color='blue')
-    # ax.plot(R_deg, R_I_mean * 1000, color='blue', linestyle='-')
-    #
-    # ax.errorbar(T_deg, T_I_mean * 1000,xerr=[1] * len(T_deg), yerr=T_I_mean * input_err_factor * 1000, fmt='.', label="Transmission", color='green')
-    # ax.plot(T_deg, T_I_mean * 1000, color='green', linestyle='-')
-    #
-    # ax.plot(R_deg, RT_I_mean_sum * 1000, label="Sum (R + T)", color='red', linestyle='--')
-    #
-    # ax.set_title("Reflection and Transmission of Opto-isolator", fontsize=16, color='blue')
-    # ax.set_xlabel("QWP orientation [deg]", fontsize=12)
-    # ax.set_ylabel("Intensity [mW]", fontsize=12)
-    # ax.grid(True)
-    # ax.legend(loc="upper right")
-    # plt.show()
+    # Calculate the sum of R_I_mean and T_I_mean
+    RT_I_mean_sum = R_I_mean + T_I_mean
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.errorbar(R_deg, R_I_mean * 1000,xerr=[1] * len(R_deg), yerr=R_I_mean * input_err_factor * 1000, fmt='.', label="Reflection", color='blue')
+    ax.plot(R_deg, R_I_mean * 1000, color='blue', linestyle='-')
+
+    ax.errorbar(T_deg, T_I_mean * 1000,xerr=[1] * len(T_deg), yerr=T_I_mean * input_err_factor * 1000, fmt='.', label="Transmission", color='green')
+    ax.plot(T_deg, T_I_mean * 1000, color='green', linestyle='-')
+
+    ax.plot(R_deg, RT_I_mean_sum * 1000, label="Sum (R + T)", color='red', linestyle='--')
+
+    ax.set_title("Reflection and Transmission of Opto-isolator", fontsize=20, color='blue')
+    ax.set_xlabel("QWP orientation [deg]", fontsize=16)
+    ax.set_ylabel("Intensity [mW]", fontsize=16)
+    plt.xticks(np.arange(R_deg[0], R_deg[-1], 15))
+    ax.grid(True)
+    ax.legend(loc="upper right")
+    plt.show()
 
 
 
